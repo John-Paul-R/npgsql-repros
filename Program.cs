@@ -1,5 +1,4 @@
 ﻿using Dapper;
-using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 Console.WriteLine("Hello, World!");
@@ -7,26 +6,17 @@ Console.WriteLine("Hello, World!");
 var connectionString = new NpgsqlConnectionStringBuilder
 {
     Host = "localhost",
-    Port = 5432,
+    Port = 5433,
     Database = "npgsql_repros",
     Username = "postgres",
     ArrayNullabilityMode = ArrayNullabilityMode.PerInstance,
 }.ToString();
 
-
-var options = new DbContextOptionsBuilder<MyDbContext>()
-    .UseNpgsql(connectionString)
-    .Options;
-
-using (var dbContext = new MyDbContext(options))
-{
-    // Apply all pending migrations
-    // dbContext.Database.Migrate();
-
-    // Add your test code here
-}
-
 using (var connection = new NpgsqlConnection(connectionString)) {
+    // There is nothing special about the below query other than that
+    // it was the first array-valued query I could construct that hit
+    // the "2 bytes of array metadata start less than 8 bytes from the
+    // end of the 8192 byte npgsql buffer" error condition.
     var entities = connection.Query<Obj>(
         /*language=sql*/$$"""
         SELECT
@@ -48,27 +38,4 @@ public sealed class Obj {
     // public required int Set02 { get; set; }
     // public required int Set03 { get; set; }
     public required int[] Set04 { get; set; }
-}
-
-
-public class MyDbContext : DbContext
-{
-    public MyDbContext(DbContextOptions<MyDbContext> options) : base(options)
-    {
-    }
-
-    public DbSet<MyEntity> MyEntities { get; set; }
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);
-
-        // Add any model configurations here
-    }
-}
-
-public class MyEntity
-{
-    public int Id { get; set; }
-    public string Name { get; set; }
 }
